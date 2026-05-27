@@ -1,10 +1,6 @@
-import type {
-  OAuthCredentials,
-  OAuthLoginCallbacks,
-  OAuthProviderInterface,
-} from "./types.js";
 import type { RuntimeEnv } from "../../../runtime.js";
 import type { WizardPrompter } from "../../../wizard/prompts.js";
+import type { OAuthCredentials, OAuthLoginCallbacks, OAuthProviderInterface } from "./types.js";
 
 const OPENAI_CODEX_PROVIDER_ID = "openai-codex";
 
@@ -46,9 +42,8 @@ function createLegacyPrompter(callbacks: OAuthLoginCallbacks): WizardPrompter {
 }
 
 async function refreshViaProviderRuntime(refreshToken: string): Promise<OAuthCredentials> {
-  const { refreshProviderOAuthCredentialWithPlugin } = await import(
-    "../../../plugins/provider-runtime.runtime.js"
-  );
+  const { refreshProviderOAuthCredentialWithPlugin } =
+    await import("../../../plugins/provider-runtime.runtime.js");
   const refreshed = await refreshProviderOAuthCredentialWithPlugin({
     provider: OPENAI_CODEX_PROVIDER_ID,
     context: {
@@ -68,16 +63,14 @@ async function refreshViaProviderRuntime(refreshToken: string): Promise<OAuthCre
   return credentials as OAuthCredentials;
 }
 
-export async function loginOpenAICodex(
-  callbacks: OAuthLoginCallbacks,
-): Promise<OAuthCredentials> {
+export async function loginOpenAICodex(callbacks: OAuthLoginCallbacks): Promise<OAuthCredentials> {
   const { loginOpenAICodexOAuth } = await import("../../../plugins/provider-openai-codex-oauth.js");
   const credentials = await loginOpenAICodexOAuth({
     prompter: createLegacyPrompter(callbacks),
     runtime: createLegacyRuntime(callbacks),
     isRemote: false,
     openUrl: async (url) => {
-      await callbacks.onAuth({ url });
+      callbacks.onAuth({ url });
     },
   });
   if (!credentials) {
@@ -86,9 +79,7 @@ export async function loginOpenAICodex(
   return credentials;
 }
 
-export async function refreshOpenAICodexToken(
-  refreshToken: string,
-): Promise<OAuthCredentials> {
+export async function refreshOpenAICodexToken(refreshToken: string): Promise<OAuthCredentials> {
   return await refreshViaProviderRuntime(refreshToken);
 }
 
