@@ -12,6 +12,7 @@
   "qa-channel",
   "qa-channel-protocol",
   "qa-lab",
+  "qa-runner-shared-runtime",
   "qa-runtime",
   "ssrf-runtime-internal",
   "test-env",
