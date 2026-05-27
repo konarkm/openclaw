@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -6,7 +7,10 @@ import {
   collectPluginSourceEntries,
   collectTopLevelPublicSurfaceEntries,
 } from "./bundled-plugin-build-entries.mjs";
-import { copyStaticExtensionAssetsForPackage } from "./static-extension-assets.mjs";
+import {
+  copyStaticExtensionAssetsForPackage,
+  discoverStaticExtensionAssets,
+} from "./static-extension-assets.mjs";
 
 const env = {
   NODE_ENV: "production",
@@ -85,6 +89,48 @@ function resolvePackageDir(repoRoot, packageDir) {
 
 function packageRelativePathExists(packageDir, relativePath) {
   return fs.existsSync(path.join(packageDir, relativePath));
+}
+
+function resolvePackageAssetBuildCommand(packageJson) {
+  const command = packageJson.openclaw?.assetScripts?.build;
+  return typeof command === "string" && command.trim().length > 0 ? command.trim() : null;
+}
+
+function runPackageAssetBuildCommand(plan, params) {
+  const command = resolvePackageAssetBuildCommand(plan.packageJson);
+  if (!command) {
+    return null;
+  }
+  if (params.logLevel !== "silent") {
+    console.error(`[plugin-npm-runtime-build] ${plan.pluginDir} assets: ${command}`);
+  }
+  const result = spawnSync(command, {
+    cwd: plan.packageDir,
+    env: process.env,
+    shell: true,
+    stdio: params.logLevel === "silent" ? "ignore" : "inherit",
+  });
+  if (result.status !== 0) {
+    throw new Error(`${plan.pluginDir} asset build failed: ${command}`);
+  }
+  return command;
+}
+
+export function listPluginPackageStaticAssetOutputs(plan) {
+  const packagePrefix = `extensions/${plan.pluginDir}/`;
+  const rootDistPrefix = `dist/extensions/${plan.pluginDir}/`;
+  return discoverStaticExtensionAssets({ rootDir: plan.repoRoot })
+    .filter(({ src, dest }) => src.startsWith(packagePrefix) && dest.startsWith(rootDistPrefix))
+    .map(({ dest }) => `dist/${dest.slice(rootDistPrefix.length)}`)
+    .toSorted((left, right) => left.localeCompare(right));
+}
+
+function assertCopiedPackageStaticAssets(plan, copiedStaticAssets) {
+  const copied = new Set(copiedStaticAssets);
+  const missing = listPluginPackageStaticAssetOutputs(plan).filter((asset) => !copied.has(asset));
+  if (missing.length > 0) {
+    throw new Error(`${plan.pluginDir} missing package static assets: ${missing.join(", ")}`);
+  }
 }
 
 export function listPublishablePluginPackageDirs(params = {}) {
@@ -238,6 +284,7 @@ export function resolvePluginNpmRuntimeBuildPlan(params) {
   return {
     ...plan,
     runtimeBuildOutputs: listPluginNpmRuntimeBuildOutputs(plan),
+    staticAssetOutputs: listPluginPackageStaticAssetOutputs(plan),
     packageFiles: resolvePluginNpmRuntimePackageFiles(plan),
     packagePeerMetadata: resolvePluginNpmRuntimePackagePeerMetadata(plan),
   };
@@ -264,12 +311,15 @@ export async function buildPluginNpmRuntime(params) {
     outDir: plan.outDir,
     platform: "node",
   });
+  const assetBuildCommand = runPackageAssetBuildCommand(plan, params);
   const copiedStaticAssets = copyStaticExtensionAssetsForPackage({
     rootDir: plan.repoRoot,
     pluginDir: plan.pluginDir,
   });
+  assertCopiedPackageStaticAssets(plan, copiedStaticAssets);
   return {
     ...plan,
+    assetBuildCommand,
     copiedStaticAssets,
   };
 }

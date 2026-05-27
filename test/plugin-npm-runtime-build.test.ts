@@ -84,5 +84,6 @@ describe("plugin npm runtime build planning", () => {
       "README.md",
       "skills/**",
     ]);
+    expect(diffsRuntimePlan.staticAssetOutputs).toEqual(["dist/assets/viewer-runtime.js"]);
   });
 });
