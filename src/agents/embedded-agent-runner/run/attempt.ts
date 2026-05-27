@@ -331,10 +331,7 @@ import {
   shouldWarnOnOrphanedUserRepair,
   shouldInjectHeartbeatPrompt,
 } from "./attempt.prompt-helpers.js";
-import {
-  steerActiveSessionWithOptionalDeliveryWait,
-  type EmbeddedAgentActiveSessionSteerTarget,
-} from "./attempt.queue-message.js";
+import { steerActiveSessionWithOptionalDeliveryWait } from "./attempt.queue-message.js";
 import {
   resolveAttemptStreamAuthProfileId,
   resolveAttemptToolPolicyMessageProvider,
