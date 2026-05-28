@@ -65,10 +65,7 @@ describe("openai responses payload policy", () => {
       provider: "openai",
       baseUrl: "https://api.openai.com/v1",
       contextWindow: "200000tokens",
-    } satisfies Pick<
-      Model<"openai-responses">,
-      "api" | "baseUrl" | "contextWindow" | "id" | "provider"
-    >;
+    };
     const payload = {} satisfies Record<string, unknown>;
 
     applyOpenAIResponsesPayloadPolicy(
